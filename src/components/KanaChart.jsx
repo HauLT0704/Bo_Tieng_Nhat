@@ -110,10 +110,10 @@ export const KanaChart = ({ userStats, setUserStats, currentMode, setCurrentMode
         <div className="space-y-8 pb-12">
           {groupedData.map((group) => (
             <div key={group.key} className="space-y-3">
-              <h2 className="text-xs font-black uppercase tracking-wider text-[var(--text-secondary)] px-2">
+              <h2 className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-[var(--text-secondary)] px-2">
                 {group.name}
               </h2>
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3">
+              <div className="grid grid-cols-4 min-[400px]:grid-cols-5 sm:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-3">
                 {group.items.map((item) => {
                   const srs = userStats.srsData[item.kana] || { box: 0 };
                   const isStarred = userStats.starred[item.kana] === true;
@@ -124,7 +124,7 @@ export const KanaChart = ({ userStats, setUserStats, currentMode, setCurrentMode
                       key={item.kana}
                       onClick={() => handleCardClick(item)}
                       className={`
-                        premium-card relative p-5 flex flex-col items-center justify-center cursor-pointer border select-none
+                        premium-card relative p-3 sm:p-5 flex flex-col items-center justify-center cursor-pointer border select-none
                         ${isSelected 
                           ? 'border-[var(--bg-accent)] bg-[var(--bg-accent)]/5 scale-105 shadow-md shadow-[var(--glow-color)] glow-active' 
                           : 'border-[var(--border-color)] bg-[var(--bg-secondary)]'
@@ -134,13 +134,13 @@ export const KanaChart = ({ userStats, setUserStats, currentMode, setCurrentMode
                       {/* Favorite star */}
                       <button
                         onClick={(e) => handleStarToggle(e, item.kana)}
-                        className={`absolute top-2 right-2 p-1 rounded-md transition-all duration-200 ${
+                        className={`absolute top-1 right-1 sm:top-2 sm:right-2 p-1 rounded-md transition-all duration-200 ${
                           isStarred 
                             ? 'text-yellow-500 scale-110' 
                             : 'text-[var(--text-secondary)] opacity-30 hover:opacity-100 hover:text-yellow-500'
                         }`}
                       >
-                        <Heart size={14} className={isStarred ? "fill-yellow-500 text-yellow-500" : ""} />
+                        <Heart size={12} className={`sm:w-[14px] sm:h-[14px] ${isStarred ? "fill-yellow-500 text-yellow-500" : ""}`} />
                       </button>
 
                       {/* Box level progress indicators */}
@@ -160,12 +160,12 @@ export const KanaChart = ({ userStats, setUserStats, currentMode, setCurrentMode
                       </div>
 
                       {/* Giant Kana */}
-                      <div className="text-4xl font-extrabold leading-none mb-1 text-[var(--text-primary)]">
+                      <div className="text-2xl sm:text-4xl font-extrabold leading-none mb-1 text-[var(--text-primary)]">
                         {item.kana}
                       </div>
 
                       {/* Romaji subtext */}
-                      <div className="text-xs font-black tracking-wider text-[var(--text-secondary)] opacity-85 uppercase mt-1">
+                      <div className="text-[9px] sm:text-xs font-black tracking-wider text-[var(--text-secondary)] opacity-85 uppercase mt-0.5 sm:mt-1">
                         {item.romaji}
                       </div>
                     </div>
