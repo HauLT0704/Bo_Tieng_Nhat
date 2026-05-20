@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Heart, HeartOff, HelpCircle, Sparkles, BookOpen, ArrowRight, Volume2 } from 'lucide-react';
+import { Play, Heart, HeartOff, HelpCircle, Sparkles, BookOpen, ArrowRight, Volume2, X } from 'lucide-react';
 import { hiraganaData, katakanaData, KANA_ROWS } from '../data/kanaData';
 import { toggleStarElement, updateSRSElement } from '../utils/srsEngine';
 
@@ -179,92 +179,99 @@ export const KanaChart = ({ userStats, setUserStats, currentMode, setCurrentMode
 
       {/* Floating Detail Drawer (Right side Slide-out or Bottom panel on Mobile) */}
       {selectedChar && (
-        <div className="fixed bottom-0 left-0 right-0 lg:bottom-6 lg:right-6 lg:left-auto lg:w-96 bg-[var(--bg-secondary)] border-t lg:border border-[var(--border-color)] shadow-2xl p-6 rounded-t-3xl lg:rounded-3xl z-40 transform transition-all duration-300 flex flex-col gap-5 max-w-full animate-in slide-in-from-bottom duration-300">
-          <div className="flex justify-between items-start">
-            <div>
-              <span className="text-[10px] font-black uppercase tracking-wider text-[var(--bg-accent)] px-2 py-1 rounded-md bg-[var(--bg-accent)]/10">
-                {selectedChar.type === 'basic' ? 'Cơ bản' : selectedChar.type === 'dakuon' ? 'Âm đục' : 'Âm ghép'}
-              </span>
-              <h3 className="font-extrabold text-lg mt-2 text-[var(--text-primary)]">Chi tiết âm tiết</h3>
-            </div>
-            <button
-              onClick={() => setSelectedChar(null)}
-              className="text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-1"
-            >
-              Đóng
-            </button>
-          </div>
-
-          <div className="flex gap-5 items-center bg-[var(--bg-primary)] p-4 rounded-2xl border border-[var(--border-color)] relative">
-            <div className="text-6xl font-black text-[var(--text-primary)] select-none w-20 h-20 bg-[var(--bg-secondary)] rounded-xl flex items-center justify-center border border-[var(--border-color)] shadow-sm">
-              {selectedChar.kana}
-            </div>
-            <div className="flex-1 space-y-1">
-              <div className="text-xs font-bold text-[var(--text-secondary)]">Phiên âm Romaji</div>
-              <div className="text-2xl font-black uppercase text-[var(--bg-accent)]">{selectedChar.romaji}</div>
-              <div className="text-[10px] font-bold text-[var(--text-secondary)] opacity-70">
-                Số nét vẽ: {selectedChar.strokes || 1} nét
+        <>
+          {/* Mobile Overlay to close by tapping outside */}
+          <div 
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 lg:hidden"
+            onClick={() => setSelectedChar(null)}
+          />
+          <div className="fixed bottom-0 left-0 right-0 lg:bottom-6 lg:right-6 lg:left-auto lg:w-96 bg-[var(--bg-secondary)] border-t lg:border border-[var(--border-color)] shadow-2xl p-5 lg:p-6 rounded-t-3xl lg:rounded-3xl z-40 transform transition-all duration-300 flex flex-col gap-4 max-w-full animate-in slide-in-from-bottom duration-300">
+            <div className="flex justify-between items-center relative">
+              <div>
+                <span className="text-[9px] font-black uppercase tracking-wider text-[var(--bg-accent)] px-2 py-1 rounded-md bg-[var(--bg-accent)]/10">
+                  {selectedChar.type === 'basic' ? 'Cơ bản' : selectedChar.type === 'dakuon' ? 'Âm đục' : 'Âm ghép'}
+                </span>
+                <h3 className="font-extrabold text-base mt-1.5 text-[var(--text-primary)]">Chi tiết âm tiết</h3>
               </div>
-            </div>
-            {/* Drawer Star Toggle */}
-            <button
-              onClick={(e) => handleStarToggle(e, selectedChar.kana)}
-              className={`p-2.5 rounded-xl transition-all duration-300 border flex flex-col items-center justify-center gap-1 min-w-[72px] cursor-pointer ${
-                userStats.starred[selectedChar.kana]
-                  ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 shadow-sm'
-                  : 'bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-secondary)] opacity-60 hover:opacity-100'
-              }`}
-              title={userStats.starred[selectedChar.kana] ? 'Bỏ chọn học' : 'Chọn học ⭐'}
-            >
-              <Heart size={18} className={userStats.starred[selectedChar.kana] ? "fill-yellow-500 text-yellow-500" : ""} />
-              <span className="text-[9px] font-bold tracking-tight">
-                {userStats.starred[selectedChar.kana] ? 'Đang học' : 'Chọn học'}
-              </span>
-            </button>
-          </div>
-
-          {/* Example vocabulary section */}
-          <div className="space-y-2">
-            <div className="text-[10px] font-black uppercase tracking-wider text-[var(--text-secondary)]">Ví dụ minh họa</div>
-            <div className="p-3 bg-[var(--bg-primary)]/70 rounded-xl border border-[var(--border-color)] text-sm">
-              <div className="flex justify-between font-bold">
-                <span className="text-[var(--text-primary)]">{selectedChar.example}</span>
-                <span className="text-[var(--bg-accent)] uppercase text-xs">{selectedChar.romaji} example</span>
-              </div>
-              <div className="text-xs text-[var(--text-secondary)] mt-1 font-semibold">{selectedChar.meaning}</div>
-            </div>
-          </div>
-
-          {/* Voice Controls and quick-actions */}
-          <div className="flex flex-col gap-2">
-            <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => playAudio(selectedChar.kana, false)}
-                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold bg-[var(--bg-accent)] text-[var(--text-inverse)] hover:bg-[var(--bg-accent-hover)] shadow-md shadow-[var(--glow-color)] transition-colors text-sm"
+                onClick={() => setSelectedChar(null)}
+                className="absolute -top-2 -right-2 p-2 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors shadow-sm"
               >
-                <Volume2 size={16} />
-                Giọng chuẩn
-              </button>
-              <button
-                onClick={() => playAudio(selectedChar.kana, true)}
-                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold border border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-primary)] transition-colors text-sm"
-              >
-                🐢 Giọng chậm
+                <X size={18} />
               </button>
             </div>
 
-            <button
-              onClick={() => {
-                setPreloadedChar(selectedChar);
-                setCurrentMode('tracing');
-              }}
-              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-black bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/10 transition-colors text-sm mt-1"
-            >
-              Luyện viết nét chữ này
-              <ArrowRight size={16} />
-            </button>
+            <div className="flex gap-3 items-center bg-[var(--bg-primary)] p-3 rounded-2xl border border-[var(--border-color)] relative">
+              <div className="text-4xl font-black text-[var(--text-primary)] select-none w-16 h-16 bg-[var(--bg-secondary)] rounded-xl flex items-center justify-center border border-[var(--border-color)] shadow-sm flex-shrink-0">
+                {selectedChar.kana}
+              </div>
+              <div className="flex-1 space-y-0.5">
+                <div className="text-[10px] font-bold text-[var(--text-secondary)] uppercase">Romaji</div>
+                <div className="text-xl font-black uppercase text-[var(--bg-accent)] leading-none">{selectedChar.romaji}</div>
+                <div className="text-[10px] font-bold text-[var(--text-secondary)] opacity-80 pt-0.5">
+                  Số nét vẽ: {selectedChar.strokes || 1} nét
+                </div>
+              </div>
+              {/* Drawer Star Toggle */}
+              <button
+                onClick={(e) => handleStarToggle(e, selectedChar.kana)}
+                className={`p-2 rounded-xl transition-all duration-300 border flex flex-col items-center justify-center gap-1 min-w-[60px] cursor-pointer ${
+                  userStats.starred[selectedChar.kana]
+                    ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 shadow-sm'
+                    : 'bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-secondary)] opacity-60 hover:opacity-100'
+                }`}
+                title={userStats.starred[selectedChar.kana] ? 'Bỏ chọn học' : 'Chọn học ⭐'}
+              >
+                <Heart size={16} className={userStats.starred[selectedChar.kana] ? "fill-yellow-500 text-yellow-500" : ""} />
+                <span className="text-[8px] font-bold tracking-tight">
+                  {userStats.starred[selectedChar.kana] ? 'Đang học' : 'Chọn học'}
+                </span>
+              </button>
+            </div>
+
+            {/* Example vocabulary section */}
+            <div className="space-y-1.5">
+              <div className="text-[9px] font-black uppercase tracking-wider text-[var(--text-secondary)]">Ví dụ minh họa</div>
+              <div className="p-2.5 bg-[var(--bg-primary)]/70 rounded-xl border border-[var(--border-color)] text-sm">
+                <div className="flex justify-between items-center font-bold">
+                  <span className="text-[var(--text-primary)] text-sm">{selectedChar.example}</span>
+                  <span className="text-[var(--bg-accent)] uppercase text-[10px] bg-[var(--bg-accent)]/10 px-1.5 py-0.5 rounded">{selectedChar.romaji} example</span>
+                </div>
+                <div className="text-[11px] text-[var(--text-secondary)] mt-1 font-semibold">{selectedChar.meaning}</div>
+              </div>
+            </div>
+
+            {/* Voice Controls and quick-actions */}
+            <div className="flex flex-col gap-2 pt-1">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => playAudio(selectedChar.kana, false)}
+                  className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold bg-[var(--bg-accent)] text-[var(--text-inverse)] hover:bg-[var(--bg-accent-hover)] shadow-md shadow-[var(--glow-color)] transition-colors text-xs"
+                >
+                  <Volume2 size={14} />
+                  Giọng chuẩn
+                </button>
+                <button
+                  onClick={() => playAudio(selectedChar.kana, true)}
+                  className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold border border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-primary)] transition-colors text-xs"
+                >
+                  🐢 Giọng chậm
+                </button>
+              </div>
+
+              <button
+                onClick={() => {
+                  setPreloadedChar(selectedChar);
+                  setCurrentMode('tracing');
+                }}
+                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-black bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/10 transition-colors text-xs mt-1"
+              >
+                Luyện viết nét chữ này
+                <ArrowRight size={14} />
+              </button>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
