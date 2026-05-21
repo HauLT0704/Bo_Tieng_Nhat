@@ -40,6 +40,8 @@ export const Sidebar = ({
   availableVoices,
   voiceProfile,
   setVoiceProfile,
+  voiceEngine,
+  setVoiceEngine,
   isAudioPlaying,
   playAudio,
   userProfile,
