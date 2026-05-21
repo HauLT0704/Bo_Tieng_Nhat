@@ -224,6 +224,8 @@ function AppContent() {
 
   // ===== AUTH GATE =====
   // Show login/register if not authenticated
+  const [explicitAuthRequired, setExplicitAuthRequired] = useState(false);
+  
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#FAF6EE] text-[#C92A2A]">
@@ -235,11 +237,33 @@ function AppContent() {
     );
   }
 
-  if (!currentUser) {
+  const totalCharactersStudied = userStats ? Object.keys(userStats.srsData || {}).length : 0;
+  const GUEST_WORD_LIMIT = 15;
+  const requireLoginForProgress = totalCharactersStudied >= GUEST_WORD_LIMIT;
+  const requireLoginForFeature = currentMode === 'profile' || currentMode === 'leaderboard';
+  
+  const shouldShowAuth = !currentUser && (explicitAuthRequired || requireLoginForProgress || requireLoginForFeature);
+
+  if (shouldShowAuth) {
+    const isForced = requireLoginForProgress;
+    
+    const handleCancel = () => {
+      setExplicitAuthRequired(false);
+      if (requireLoginForFeature) {
+        setCurrentMode('chart');
+      }
+    };
+
     return authPage === 'register' ? (
-      <RegisterPage onSwitchToLogin={() => setAuthPage('login')} />
+      <RegisterPage 
+        onSwitchToLogin={() => setAuthPage('login')} 
+        onCancel={isForced ? undefined : handleCancel}
+      />
     ) : (
-      <LoginPage onSwitchToRegister={() => setAuthPage('register')} />
+      <LoginPage 
+        onSwitchToRegister={() => setAuthPage('register')} 
+        onCancel={isForced ? undefined : handleCancel}
+      />
     );
   }
 
@@ -302,6 +326,7 @@ function AppContent() {
         isAudioPlaying={isAudioPlaying}
         playAudio={playVoiceAudio}
         userProfile={userProfile}
+        onLoginClick={() => setExplicitAuthRequired(true)}
       />
 
       {/* MAIN CONTENT */}
@@ -353,18 +378,27 @@ function AppContent() {
             </div>
 
             {/* Avatar mini */}
-            <button
-              onClick={() => setCurrentMode('profile')}
-              className="w-8 h-8 rounded-full overflow-hidden border-2 border-[var(--border-color)] hover:border-[var(--bg-accent)] transition-all cursor-pointer flex-shrink-0"
-            >
-              {userProfile?.avatar ? (
-                <img src={userProfile.avatar} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-xs text-white font-black">
-                  {(userProfile?.displayName || 'U')[0].toUpperCase()}
-                </div>
-              )}
-            </button>
+            {currentUser ? (
+              <button
+                onClick={() => setCurrentMode('profile')}
+                className="w-8 h-8 rounded-full overflow-hidden border-2 border-[var(--border-color)] hover:border-[var(--bg-accent)] transition-all cursor-pointer flex-shrink-0"
+              >
+                {userProfile?.avatar ? (
+                  <img src={userProfile.avatar} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-xs text-white font-black">
+                    {(userProfile?.displayName || 'U')[0].toUpperCase()}
+                  </div>
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={() => setExplicitAuthRequired(true)}
+                className="text-xs font-bold bg-[var(--bg-accent)] text-white px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity"
+              >
+                Đăng Nhập
+              </button>
+            )}
           </div>
         </header>
 

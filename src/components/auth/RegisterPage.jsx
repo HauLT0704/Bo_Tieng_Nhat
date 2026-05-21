@@ -6,7 +6,7 @@ import { isUsernameTaken } from '../../firebase/firestoreService';
 // Vietnamese phone regex: 0[3|5|7|8|9]xxxxxxxx or 84[3|5|7|8|9]xxxxxxxx
 const VN_PHONE_REGEX = /^(0|\+?84)(3[2-9]|5[25689]|7[06-9]|8[1-9]|9[0-9])\d{7}$/;
 
-export const RegisterPage = ({ onSwitchToLogin }) => {
+export const RegisterPage = ({ onSwitchToLogin, onCancel }) => {
   const { signup, loginWithGoogle, authError, setAuthError } = useAuth();
 
   const [formData, setFormData] = useState({
@@ -156,6 +156,15 @@ export const RegisterPage = ({ onSwitchToLogin }) => {
       </div>
 
       <div className="w-full max-w-md relative z-10">
+        {onCancel && (
+          <button 
+            onClick={onCancel} 
+            className="absolute -top-3 -right-3 p-2 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--bg-accent)] transition-all z-20 shadow-lg"
+          >
+            <X size={18} />
+          </button>
+        )}
+        
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-emerald-500 shadow-2xl shadow-emerald-500/30 mb-4 floating-element">

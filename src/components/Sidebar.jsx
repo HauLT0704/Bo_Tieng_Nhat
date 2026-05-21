@@ -40,11 +40,10 @@ export const Sidebar = ({
   availableVoices,
   voiceProfile,
   setVoiceProfile,
-  voiceEngine,
-  setVoiceEngine,
   isAudioPlaying,
   playAudio,
-  userProfile
+  userProfile,
+  onLoginClick
 }) => {
   const { logout } = useAuth();
   const modes = [
@@ -107,7 +106,7 @@ export const Sidebar = ({
           </div>
 
           {/* User Mini Profile */}
-          {userProfile && (
+          {userProfile ? (
             <button
               onClick={() => { setCurrentMode('profile'); setSidebarOpen(false); }}
               className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-[var(--bg-primary)]/60 border border-[var(--border-color)] hover:border-[var(--bg-accent)]/30 transition-all group"
@@ -126,6 +125,19 @@ export const Sidebar = ({
                 <div className="flex items-center gap-1.5">
                   <span className="text-[9px] font-bold" style={{ color: titleInfo.color }}>{titleInfo.icon} {titleInfo.title}</span>
                 </div>
+              </div>
+            </button>
+          ) : (
+            <button
+              onClick={() => { onLoginClick(); setSidebarOpen(false); }}
+              className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-[var(--bg-primary)]/60 border border-[var(--border-color)] hover:border-[var(--bg-accent)]/30 transition-all group"
+            >
+              <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-[var(--border-color)] group-hover:border-[var(--bg-accent)] transition-colors flex-shrink-0 flex items-center justify-center bg-[var(--bg-secondary)]">
+                <User size={16} className="text-[var(--text-secondary)]" />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <div className="text-sm font-bold text-[var(--text-primary)] truncate">Đăng nhập / Đăng ký</div>
+                <div className="text-[9px] font-bold text-[var(--text-secondary)] mt-0.5">Để lưu tiến độ học tập</div>
               </div>
             </button>
           )}
@@ -238,16 +250,18 @@ export const Sidebar = ({
           })}
 
           {/* Logout button */}
-          <button
-            onClick={logout}
-            className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-left transition-all duration-200 hover:bg-red-500/10 text-red-500 border border-transparent hover:border-red-500/20 mt-2"
-          >
-            <LogOut size={20} />
-            <div>
-              <div className="text-sm font-semibold leading-none">Đăng Xuất</div>
-              <div className="text-[10px] mt-1 opacity-70">Thoát tài khoản</div>
-            </div>
-          </button>
+          {userProfile && (
+            <button
+              onClick={logout}
+              className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-left transition-all duration-200 hover:bg-red-500/10 text-red-500 border border-transparent hover:border-red-500/20 mt-2"
+            >
+              <LogOut size={20} />
+              <div>
+                <div className="text-sm font-semibold leading-none">Đăng Xuất</div>
+                <div className="text-[10px] mt-1 opacity-70">Thoát tài khoản</div>
+              </div>
+            </button>
+          )}
 
         </nav>
 

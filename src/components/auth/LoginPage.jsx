@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { LogIn, Mail, Lock, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
+import { LogIn, Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, X } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
-export const LoginPage = ({ onSwitchToRegister }) => {
+export const LoginPage = ({ onSwitchToRegister, onCancel }) => {
   const { login, loginWithGoogle, authError, setAuthError } = useAuth();
   
   const [email, setEmail] = useState('');
@@ -65,6 +65,15 @@ export const LoginPage = ({ onSwitchToRegister }) => {
 
       {/* Login Card */}
       <div className="w-full max-w-md relative z-10">
+        {onCancel && (
+          <button 
+            onClick={onCancel} 
+            className="absolute -top-3 -right-3 p-2 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--bg-accent)] transition-all z-20 shadow-lg"
+          >
+            <X size={18} />
+          </button>
+        )}
+        
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-emerald-500 shadow-2xl shadow-emerald-500/30 mb-4 floating-element">
