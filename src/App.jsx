@@ -279,7 +279,7 @@ function AppContent() {
     );
   }
 
-  const totalCharactersStudied = Object.keys(userStats.srsData).length;
+
   const accuracy = userStats.totalQuestionsAnswered > 0
     ? Math.round((userStats.correctAnswersCount / userStats.totalQuestionsAnswered) * 100)
     : 100;
