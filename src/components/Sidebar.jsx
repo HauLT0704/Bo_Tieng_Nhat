@@ -15,9 +15,13 @@ import {
   Flame,
   Menu,
   X,
-  Search
+  Search,
+  User,
+  Trophy,
+  LogOut
 } from 'lucide-react';
-import { getXpForNextLevel, getLevelProgressPercentage } from '../utils/srsEngine';
+import { getRequiredExp, getLevelProgress, getRemainingExpInLevel, getTitleForLevel } from '../utils/gamificationEngine';
+import { useAuth } from '../hooks/useAuth';
 
 export const Sidebar = ({ 
   currentMode, 
@@ -39,8 +43,10 @@ export const Sidebar = ({
   voiceEngine,
   setVoiceEngine,
   isAudioPlaying,
-  playAudio
+  playAudio,
+  userProfile
 }) => {
+  const { logout } = useAuth();
   const modes = [
     { id: 'chart', label: 'Bảng Chữ Cái', icon: BookOpen, desc: 'Học & tra cứu âm tiết' },
     { id: 'flashcard', label: 'Thẻ Flashcard', icon: Layers, desc: 'Luyện trí nhớ phản xạ' },
@@ -51,14 +57,15 @@ export const Sidebar = ({
     { id: 'dictionary', label: 'Tra Từ & Thẻ', icon: Search, desc: 'Dịch Việt-Nhật & thêm thẻ' }
   ];
 
-  const nextLevelXp = getXpForNextLevel(userStats.level);
-  const progressPercentage = getLevelProgressPercentage(userStats.xp, userStats.level);
+  const accountModes = [
+    { id: 'profile', label: 'Hồ Sơ', icon: User, desc: 'Xem & chỉnh sửa thông tin' },
+    { id: 'leaderboard', label: 'Bảng Xếp Hạng', icon: Trophy, desc: 'Xếp hạng người học tuần' },
+  ];
 
-  // Helper to format remaining XP
-  let accumulatedXpInLevel = userStats.xp;
-  for (let i = 1; i < userStats.level; i++) {
-    accumulatedXpInLevel -= getXpForNextLevel(i);
-  }
+  const nextLevelXp = getRequiredExp(userStats.level);
+  const progressPercentage = getLevelProgress(userStats.xp, userStats.level);
+  const accumulatedXpInLevel = getRemainingExpInLevel(userStats.xp, userStats.level);
+  const titleInfo = getTitleForLevel(userStats.level);
 
   return (
     <>
@@ -77,25 +84,51 @@ export const Sidebar = ({
         flex flex-col h-full transform transition-transform duration-300 lg:translate-x-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        {/* Sidebar Header */}
-        <div className="p-6 border-b border-[var(--border-color)] flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-emerald-500/30 floating-element">
-              🥑
+        {/* Sidebar Header with User Info */}
+        <div className="p-6 border-b border-[var(--border-color)]">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-emerald-500/30 floating-element">
+                🥑
+              </div>
+              <div>
+                <h1 className="font-extrabold text-xl tracking-tight text-[var(--text-primary)]">
+                  Bơ Tiếng <span className="text-emerald-500">Nhật</span>
+                </h1>
+                <p className="text-[10px] tracking-widest uppercase opacity-75 font-semibold text-[var(--text-secondary)]">アボカド日本語</p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-extrabold text-xl tracking-tight text-[var(--text-primary)]">
-                Bơ Tiếng <span className="text-emerald-500">Nhật</span>
-              </h1>
-              <p className="text-[10px] tracking-widest uppercase opacity-75 font-semibold text-[var(--text-secondary)]">アボカド日本語</p>
-            </div>
+            <button 
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-2 rounded-lg hover:bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors"
+            >
+              <X size={20} />
+            </button>
           </div>
-          <button 
-            onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-2 rounded-lg hover:bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors"
-          >
-            <X size={20} />
-          </button>
+
+          {/* User Mini Profile */}
+          {userProfile && (
+            <button
+              onClick={() => { setCurrentMode('profile'); setSidebarOpen(false); }}
+              className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-[var(--bg-primary)]/60 border border-[var(--border-color)] hover:border-[var(--bg-accent)]/30 transition-all group"
+            >
+              <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-[var(--border-color)] group-hover:border-[var(--bg-accent)] transition-colors flex-shrink-0">
+                {userProfile.avatar ? (
+                  <img src={userProfile.avatar} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-xs text-white font-black">
+                    {(userProfile.displayName || 'U')[0].toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <div className="text-sm font-bold text-[var(--text-primary)] truncate">{userProfile.displayName}</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-bold" style={{ color: titleInfo.color }}>{titleInfo.icon} {titleInfo.title}</span>
+                </div>
+              </div>
+            </button>
+          )}
         </div>
 
         {/* Gamified Stats Panel */}
@@ -170,6 +203,52 @@ export const Sidebar = ({
               </button>
             );
           })}
+
+          {/* Account section */}
+          <div className="text-[10px] font-black uppercase tracking-wider text-[var(--text-secondary)] px-3 mb-2 mt-4">
+            Tài Khoản
+          </div>
+          {accountModes.map((m) => {
+            const Icon = m.icon;
+            const isActive = currentMode === m.id;
+            return (
+              <button
+                key={m.id}
+                onClick={() => {
+                  setCurrentMode(m.id);
+                  setSidebarOpen(false);
+                }}
+                className={`
+                  w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-left transition-all duration-200
+                  ${isActive 
+                    ? 'bg-[var(--bg-accent)] text-[var(--text-inverse)] shadow-lg shadow-[var(--glow-color)] font-bold translate-x-1' 
+                    : 'hover:bg-[var(--bg-primary)] text-[var(--text-primary)] border border-transparent hover:border-[var(--border-color)]'
+                  }
+                `}
+              >
+                <Icon size={20} className={isActive ? 'text-[var(--text-inverse)]' : 'text-[var(--bg-accent)]'} />
+                <div>
+                  <div className="text-sm font-semibold leading-none">{m.label}</div>
+                  <div className={`text-[10px] mt-1 ${isActive ? 'opacity-80' : 'text-[var(--text-secondary)] opacity-90'}`}>
+                    {m.desc}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+
+          {/* Logout button */}
+          <button
+            onClick={logout}
+            className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-left transition-all duration-200 hover:bg-red-500/10 text-red-500 border border-transparent hover:border-red-500/20 mt-2"
+          >
+            <LogOut size={20} />
+            <div>
+              <div className="text-sm font-semibold leading-none">Đăng Xuất</div>
+              <div className="text-[10px] mt-1 opacity-70">Thoát tài khoản</div>
+            </div>
+          </button>
+
         </nav>
 
         {/* Footer Settings & Theme Options */}
