@@ -1,7 +1,7 @@
 // Authentication Context for Nihongo Hub
 // Provides auth state and methods across the entire app
 
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useRef } from 'react';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -10,7 +10,7 @@ import {
   onAuthStateChanged,
   updateProfile as fbUpdateProfile,
 } from 'firebase/auth';
-import { auth, googleProvider } from '../firebase/firebaseConfig';
+import { auth, googleProvider, RecaptchaVerifier, signInWithPhoneNumber } from '../firebase/firebaseConfig';
 import {
   createUserDocument,
   getUserDocument,
@@ -34,6 +34,10 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
 
+  // Phone Auth state
+  const [confirmationResult, setConfirmationResult] = useState(null);
+  const recaptchaVerifierRef = useRef(null);
+
   // Listen to Firebase auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -46,12 +50,18 @@ export const AuthProvider = ({ children }) => {
           
           if (!profile) {
             // First time — create user document
+            const providerData = user.providerData[0];
+            let authProvider = 'email';
+            if (providerData?.providerId === 'google.com') authProvider = 'google';
+            else if (providerData?.providerId === 'phone') authProvider = 'phone';
+
             profile = await createUserDocument(user.uid, {
               username: user.displayName?.toLowerCase().replace(/\s+/g, '_') || `user_${user.uid.slice(0, 8)}`,
               displayName: user.displayName || 'Người học mới',
               email: user.email || '',
+              phone: user.phoneNumber || '',
               avatar: user.photoURL || '',
-              authProvider: user.providerData[0]?.providerId === 'google.com' ? 'google' : 'email',
+              authProvider,
             });
           }
           
@@ -187,6 +197,124 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // ===== PHONE AUTH METHODS =====
+
+  /**
+   * Initialize invisible reCAPTCHA for phone auth
+   */
+  const setupRecaptcha = (buttonId) => {
+    try {
+      // Clear existing verifier if any
+      if (recaptchaVerifierRef.current) {
+        try {
+          recaptchaVerifierRef.current.clear();
+        } catch (e) {
+          // Ignore clear errors
+        }
+        recaptchaVerifierRef.current = null;
+      }
+
+      recaptchaVerifierRef.current = new RecaptchaVerifier(auth, buttonId, {
+        size: 'invisible',
+        callback: () => {
+          // reCAPTCHA solved
+        },
+        'expired-callback': () => {
+          setAuthError('reCAPTCHA đã hết hạn. Vui lòng thử lại.');
+        },
+      });
+
+      return recaptchaVerifierRef.current;
+    } catch (err) {
+      console.error('Recaptcha setup error:', err);
+      throw new Error('Không thể khởi tạo xác minh. Vui lòng tải lại trang.');
+    }
+  };
+
+  /**
+   * Send OTP to phone number
+   * @param {string} phoneNumber - Vietnamese phone number (will be formatted to +84...)
+   * @param {string} recaptchaButtonId - ID of the button for invisible reCAPTCHA
+   */
+  const sendPhoneOTP = async (phoneNumber, recaptchaButtonId = 'send-otp-btn') => {
+    setAuthError(null);
+
+    try {
+      checkRateLimit();
+
+      // Format Vietnamese phone number to E.164 format
+      let formattedPhone = phoneNumber.replace(/\s+/g, '').trim();
+      if (formattedPhone.startsWith('0')) {
+        formattedPhone = '+84' + formattedPhone.slice(1);
+      } else if (formattedPhone.startsWith('84')) {
+        formattedPhone = '+' + formattedPhone;
+      } else if (!formattedPhone.startsWith('+84')) {
+        formattedPhone = '+84' + formattedPhone;
+      }
+
+      const appVerifier = setupRecaptcha(recaptchaButtonId);
+      const confirmation = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
+      setConfirmationResult(confirmation);
+
+      return { success: true, phone: formattedPhone };
+    } catch (err) {
+      // Clean up recaptcha on error
+      if (recaptchaVerifierRef.current) {
+        try {
+          recaptchaVerifierRef.current.clear();
+        } catch (e) {
+          // Ignore
+        }
+        recaptchaVerifierRef.current = null;
+      }
+
+      const message = getVietnameseError(err.code || err.message);
+      setAuthError(message);
+      throw new Error(message);
+    }
+  };
+
+  /**
+   * Verify OTP code entered by user
+   * @param {string} otpCode - 6-digit OTP code
+   */
+  const verifyPhoneOTP = async (otpCode) => {
+    setAuthError(null);
+
+    if (!confirmationResult) {
+      const msg = 'Chưa gửi mã OTP. Vui lòng gửi lại mã.';
+      setAuthError(msg);
+      throw new Error(msg);
+    }
+
+    try {
+      const result = await confirmationResult.confirm(otpCode);
+
+      // Check if user already exists in Firestore
+      let profile = await getUserDocument(result.user.uid);
+
+      if (!profile) {
+        // First phone login — create profile
+        profile = await createUserDocument(result.user.uid, {
+          username: `user_${result.user.uid.slice(0, 8)}`,
+          displayName: 'Người học mới',
+          phone: result.user.phoneNumber || '',
+          authProvider: 'phone',
+        });
+      }
+
+      setUserProfile(profile);
+      setConfirmationResult(null);
+      loginAttempts.count = 0;
+
+      return result.user;
+    } catch (err) {
+      const message = getVietnameseError(err.code || err.message);
+      setAuthError(message);
+      throw new Error(message);
+    }
+  };
+
   /**
    * Logout
    */
@@ -195,6 +323,7 @@ export const AuthProvider = ({ children }) => {
       await signOut(auth);
       setUserProfile(null);
       setAuthError(null);
+      setConfirmationResult(null);
     } catch (err) {
       console.error('Logout error:', err);
     }
@@ -267,6 +396,9 @@ export const AuthProvider = ({ children }) => {
     signup,
     login,
     loginWithGoogle,
+    sendPhoneOTP,
+    verifyPhoneOTP,
+    confirmationResult,
     logout,
     updateProfile,
     syncProgress,
@@ -297,6 +429,21 @@ function getVietnameseError(code) {
     'auth/popup-closed-by-user': 'Cửa sổ đăng nhập Google đã bị đóng.',
     'auth/cancelled-popup-request': 'Đã hủy yêu cầu đăng nhập.',
     'auth/network-request-failed': 'Lỗi mạng. Kiểm tra kết nối internet.',
+    // Firebase config errors
+    'auth/configuration-not-found': 'Chưa bật Authentication trên Firebase Console. Vào Firebase Console → Authentication → Sign-in method để bật.',
+    'auth/internal-error': 'Lỗi hệ thống. Kiểm tra cấu hình Firebase Console.',
+    // Phone Auth errors
+    'auth/invalid-phone-number': 'Số điện thoại không hợp lệ. Vui lòng kiểm tra lại.',
+    'auth/missing-phone-number': 'Vui lòng nhập số điện thoại.',
+    'auth/quota-exceeded': 'Đã vượt quá số lần gửi SMS. Vui lòng thử lại sau.',
+    'auth/captcha-check-failed': 'Xác minh reCAPTCHA thất bại. Vui lòng tải lại trang.',
+    'auth/invalid-verification-code': 'Mã OTP không đúng. Vui lòng kiểm tra lại.',
+    'auth/code-expired': 'Mã OTP đã hết hạn. Vui lòng gửi lại mã mới.',
+    'auth/missing-verification-code': 'Vui lòng nhập mã OTP.',
+    'auth/credential-already-in-use': 'Số điện thoại này đã được liên kết với tài khoản khác.',
+    'auth/account-exists-with-different-credential': 'Đã tồn tại tài khoản với thông tin đăng nhập khác.',
+    'auth/invalid-verification-id': 'Phiên xác minh đã hết hạn. Vui lòng gửi lại mã OTP.',
+    'auth/unverified-email': 'Email chưa được xác minh.',
   };
   
   return errors[code] || code || 'Đã xảy ra lỗi. Vui lòng thử lại.';
