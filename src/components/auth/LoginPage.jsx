@@ -1,15 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { LogIn, Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, X, Phone, ArrowRight, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { LogIn, Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, X } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
-// Vietnamese phone regex
-const VN_PHONE_REGEX = /^(0|\+?84)(3[2-9]|5[25689]|7[06-9]|8[1-9]|9[0-9])\d{7}$/;
-
 export const LoginPage = ({ onSwitchToRegister, onCancel }) => {
-  const { login, loginWithGoogle, sendPhoneOTP, verifyPhoneOTP, confirmationResult, authError, setAuthError } = useAuth();
-
-  // Tab state: 'email' | 'phone'
-  const [activeTab, setActiveTab] = useState('email');
+  const { login, loginWithGoogle, authError, setAuthError } = useAuth();
 
   // Email login state
   const [email, setEmail] = useState('');
@@ -19,33 +13,12 @@ export const LoginPage = ({ onSwitchToRegister, onCancel }) => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [localError, setLocalError] = useState('');
 
-  // Phone login state
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
-  const [phoneStep, setPhoneStep] = useState('input'); // 'input' | 'otp'
-  const [phoneLoading, setPhoneLoading] = useState(false);
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [countdown, setCountdown] = useState(0);
-  const [formattedPhone, setFormattedPhone] = useState('');
-
-  const otpRefs = useRef([]);
-  const countdownRef = useRef(null);
-
-  // Countdown timer for resend OTP
-  useEffect(() => {
-    if (countdown > 0) {
-      countdownRef.current = setTimeout(() => setCountdown(c => c - 1), 1000);
-    }
-    return () => clearTimeout(countdownRef.current);
-  }, [countdown]);
-
-  // Clear errors on tab switch
+  // Clear errors on mount
   useEffect(() => {
     setLocalError('');
     setAuthError(null);
-  }, [activeTab]);
+  }, [setAuthError]);
 
-  // ===== EMAIL LOGIN =====
   const handleLogin = async (e) => {
     e.preventDefault();
     setLocalError('');
@@ -69,7 +42,6 @@ export const LoginPage = ({ onSwitchToRegister, onCancel }) => {
     setLoading(false);
   };
 
-  // ===== GOOGLE LOGIN =====
   const handleGoogleLogin = async () => {
     setLocalError('');
     setAuthError(null);
@@ -80,93 +52,6 @@ export const LoginPage = ({ onSwitchToRegister, onCancel }) => {
       setLocalError(err.message);
     }
     setGoogleLoading(false);
-  };
-
-  // ===== PHONE LOGIN =====
-  const handleSendOTP = async () => {
-    setLocalError('');
-    setAuthError(null);
-
-    const cleanPhone = phoneNumber.replace(/\s+/g, '').trim();
-    if (!cleanPhone) {
-      setLocalError('Vui lòng nhập số điện thoại');
-      return;
-    }
-    if (!VN_PHONE_REGEX.test(cleanPhone)) {
-      setLocalError('Số điện thoại VN không hợp lệ (VD: 0912345678)');
-      return;
-    }
-
-    setPhoneLoading(true);
-    try {
-      const result = await sendPhoneOTP(cleanPhone, 'send-otp-btn');
-      setFormattedPhone(result.phone);
-      setPhoneStep('otp');
-      setCountdown(60);
-      setOtpCode(['', '', '', '', '', '']);
-      // Focus first OTP input
-      setTimeout(() => otpRefs.current[0]?.focus(), 100);
-    } catch (err) {
-      setLocalError(err.message);
-    }
-    setPhoneLoading(false);
-  };
-
-  const handleOTPChange = (index, value) => {
-    // Only allow single digit
-    if (value && !/^\d$/.test(value)) return;
-
-    const newOtp = [...otpCode];
-    newOtp[index] = value;
-    setOtpCode(newOtp);
-
-    // Auto-focus next input
-    if (value && index < 5) {
-      otpRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleOTPKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otpCode[index] && index > 0) {
-      otpRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleOTPPaste = (e) => {
-    e.preventDefault();
-    const paste = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (paste.length === 6) {
-      const newOtp = paste.split('');
-      setOtpCode(newOtp);
-      otpRefs.current[5]?.focus();
-    }
-  };
-
-  const handleVerifyOTP = async () => {
-    setLocalError('');
-    setAuthError(null);
-
-    const code = otpCode.join('');
-    if (code.length !== 6) {
-      setLocalError('Vui lòng nhập đủ 6 chữ số mã OTP');
-      return;
-    }
-
-    setOtpLoading(true);
-    try {
-      await verifyPhoneOTP(code);
-    } catch (err) {
-      setLocalError(err.message);
-      setOtpCode(['', '', '', '', '', '']);
-      otpRefs.current[0]?.focus();
-    }
-    setOtpLoading(false);
-  };
-
-  const handleResendOTP = async () => {
-    if (countdown > 0) return;
-    setPhoneStep('input');
-    setOtpCode(['', '', '', '', '', '']);
   };
 
   const error = localError || authError;
@@ -210,26 +95,6 @@ export const LoginPage = ({ onSwitchToRegister, onCancel }) => {
 
         {/* Form Card */}
         <div className="auth-card">
-          {/* Tab Switcher */}
-          <div className="auth-tab-switcher mb-6">
-            <button
-              type="button"
-              className={`auth-tab ${activeTab === 'email' ? 'auth-tab-active' : ''}`}
-              onClick={() => { setActiveTab('email'); setPhoneStep('input'); }}
-            >
-              <Mail size={14} />
-              <span>Email</span>
-            </button>
-            <button
-              type="button"
-              className={`auth-tab ${activeTab === 'phone' ? 'auth-tab-active' : ''}`}
-              onClick={() => setActiveTab('phone')}
-            >
-              <Phone size={14} />
-              <span>Số điện thoại</span>
-            </button>
-          </div>
-
           {/* Error Alert */}
           {error && (
             <div className="flex items-start gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 text-sm font-medium animate-shake mb-5" id="login-error">
@@ -238,193 +103,70 @@ export const LoginPage = ({ onSwitchToRegister, onCancel }) => {
             </div>
           )}
 
-          {/* ===== EMAIL TAB ===== */}
-          {activeTab === 'email' && (
-            <form onSubmit={handleLogin} className="space-y-5">
-              {/* Email */}
-              <div className="space-y-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
-                  Email
-                </label>
-                <div className="relative">
-                  <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" />
-                  <input
-                    id="login-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="email@example.com"
-                    className="auth-input pl-11"
-                    disabled={loading}
-                    autoComplete="email"
-                  />
-                </div>
+          <form onSubmit={handleLogin} className="space-y-5">
+            {/* Email */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                Email
+              </label>
+              <div className="relative">
+                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" />
+                <input
+                  id="login-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="email@example.com"
+                  className="auth-input pl-11"
+                  disabled={loading}
+                  autoComplete="email"
+                />
               </div>
-
-              {/* Password */}
-              <div className="space-y-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
-                  Mật khẩu
-                </label>
-                <div className="relative">
-                  <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" />
-                  <input
-                    id="login-password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="auth-input pl-11 pr-12"
-                    disabled={loading}
-                    autoComplete="current-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Login Button */}
-              <button
-                id="login-submit"
-                type="submit"
-                disabled={loading || googleLoading}
-                className="auth-btn-primary w-full"
-              >
-                {loading ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
-                  <LogIn size={18} />
-                )}
-                <span>{loading ? 'Đang đăng nhập...' : 'Đăng Nhập'}</span>
-              </button>
-            </form>
-          )}
-
-          {/* ===== PHONE TAB ===== */}
-          {activeTab === 'phone' && (
-            <div className="space-y-5">
-              {phoneStep === 'input' ? (
-                <>
-                  {/* Phone Input */}
-                  <div className="space-y-2">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
-                      Số điện thoại Việt Nam
-                    </label>
-                    <div className="relative">
-                      <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" />
-                      <input
-                        id="login-phone"
-                        type="tel"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        placeholder="0912 345 678"
-                        className="auth-input pl-11"
-                        disabled={phoneLoading}
-                        autoComplete="tel"
-                      />
-                    </div>
-                    <p className="text-[10px] text-[var(--text-secondary)] font-medium">
-                      Chúng tôi sẽ gửi mã OTP 6 số qua SMS đến số điện thoại này
-                    </p>
-                  </div>
-
-                  {/* Send OTP Button */}
-                  <button
-                    id="send-otp-btn"
-                    type="button"
-                    onClick={handleSendOTP}
-                    disabled={phoneLoading}
-                    className="auth-btn-primary w-full"
-                  >
-                    {phoneLoading ? (
-                      <Loader2 size={18} className="animate-spin" />
-                    ) : (
-                      <ArrowRight size={18} />
-                    )}
-                    <span>{phoneLoading ? 'Đang gửi mã...' : 'Gửi Mã OTP'}</span>
-                  </button>
-                </>
-              ) : (
-                <>
-                  {/* OTP Sent Info */}
-                  <div className="text-center space-y-2">
-                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-500/10 mb-1">
-                      <ShieldCheck size={28} className="text-emerald-500" />
-                    </div>
-                    <p className="text-sm font-bold text-[var(--text-primary)]">Nhập mã xác minh</p>
-                    <p className="text-xs text-[var(--text-secondary)]">
-                      Đã gửi mã 6 số đến <strong className="text-[var(--text-primary)]">{formattedPhone}</strong>
-                    </p>
-                  </div>
-
-                  {/* OTP Input - 6 boxes */}
-                  <div className="flex justify-center gap-2" onPaste={handleOTPPaste}>
-                    {otpCode.map((digit, index) => (
-                      <input
-                        key={index}
-                        ref={(el) => (otpRefs.current[index] = el)}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleOTPChange(index, e.target.value)}
-                        onKeyDown={(e) => handleOTPKeyDown(index, e)}
-                        className={`otp-input-box ${digit ? 'otp-input-filled' : ''}`}
-                        disabled={otpLoading}
-                        autoFocus={index === 0}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Verify Button */}
-                  <button
-                    type="button"
-                    onClick={handleVerifyOTP}
-                    disabled={otpLoading || otpCode.join('').length !== 6}
-                    className="auth-btn-primary w-full"
-                  >
-                    {otpLoading ? (
-                      <Loader2 size={18} className="animate-spin" />
-                    ) : (
-                      <ShieldCheck size={18} />
-                    )}
-                    <span>{otpLoading ? 'Đang xác minh...' : 'Xác Minh OTP'}</span>
-                  </button>
-
-                  {/* Resend / Change Number */}
-                  <div className="flex items-center justify-between text-xs">
-                    <button
-                      type="button"
-                      onClick={() => { setPhoneStep('input'); setOtpCode(['', '', '', '', '', '']); setLocalError(''); setAuthError(null); }}
-                      className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-medium transition-colors"
-                    >
-                      ← Đổi số
-                    </button>
-
-                    {countdown > 0 ? (
-                      <span className="text-[var(--text-secondary)] font-medium">
-                        Gửi lại sau <strong className="text-[var(--bg-accent)]">{countdown}s</strong>
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleResendOTP}
-                        className="text-[var(--bg-accent)] font-bold hover:underline transition-all"
-                      >
-                        Gửi lại mã
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
             </div>
-          )}
+
+            {/* Password */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                Mật khẩu
+              </label>
+              <div className="relative">
+                <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" />
+                <input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="auth-input pl-11 pr-12"
+                  disabled={loading}
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Login Button */}
+            <button
+              id="login-submit"
+              type="submit"
+              disabled={loading || googleLoading}
+              className="auth-btn-primary w-full"
+            >
+              {loading ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <LogIn size={18} />
+              )}
+              <span>{loading ? 'Đang đăng nhập...' : 'Đăng Nhập'}</span>
+            </button>
+          </form>
 
           {/* Divider */}
           <div className="relative flex items-center gap-4 my-6">

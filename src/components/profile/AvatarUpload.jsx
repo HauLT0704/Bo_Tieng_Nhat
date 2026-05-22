@@ -10,6 +10,7 @@ export const AvatarUpload = ({ currentAvatar, onAvatarChange, onClose }) => {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
 
   // Crop state
   const [cropMode, setCropMode] = useState(false);
@@ -47,6 +48,25 @@ export const AvatarUpload = ({ currentAvatar, onAvatarChange, onClose }) => {
       setCropMode(true);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileSelect({ target: { files: e.dataTransfer.files } });
+    }
   };
 
   const handleMouseDown = (e) => {
@@ -174,32 +194,39 @@ export const AvatarUpload = ({ currentAvatar, onAvatarChange, onClose }) => {
             <div className="space-y-4">
               {/* Current Avatar */}
               <div className="flex justify-center">
-                <div className="w-28 h-28 rounded-full border-4 border-[var(--border-color)] overflow-hidden bg-[var(--bg-primary)]">
+                <div className="w-28 h-28 rounded-full border-4 border-[var(--border-color)] overflow-hidden bg-[var(--bg-primary)] shadow-inner">
                   {currentAvatar ? (
                     <img src={currentAvatar} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-4xl">🥑</div>
+                    <div className="w-full h-full flex items-center justify-center text-4xl bg-gradient-to-br from-emerald-400 to-teal-600">🥑</div>
                   )}
                 </div>
               </div>
 
-              <button
+              {/* Drag and Drop Zone */}
+              <div 
+                className={`border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-3 ${isDragging ? 'border-[var(--bg-accent)] bg-[var(--bg-accent)]/5 scale-[1.02]' : 'border-[var(--border-color)] hover:border-[var(--bg-accent)] hover:bg-[var(--bg-primary)]'}`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className="auth-btn-primary w-full"
               >
-                <Camera size={18} />
-                <span>Chọn ảnh từ thiết bị</span>
-              </button>
+                 <div className="w-12 h-12 rounded-full bg-[var(--bg-primary)] flex items-center justify-center text-[var(--text-secondary)] shadow-sm border border-[var(--border-color)]">
+                    <Camera size={24} />
+                 </div>
+                 <div>
+                   <p className="text-sm font-bold text-[var(--text-primary)]">Nhấp hoặc kéo thả ảnh vào đây</p>
+                   <p className="text-xs text-[var(--text-secondary)] mt-1">Hỗ trợ: JPG, PNG, WEBP (Tối đa 5MB)</p>
+                 </div>
+              </div>
+
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg, image/png, image/webp"
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              <p className="text-[10px] text-[var(--text-secondary)] text-center">
-                Chấp nhận: JPG, PNG, WEBP • Tối đa 5MB
-              </p>
             </div>
           ) : (
             /* Crop Mode */

@@ -344,7 +344,7 @@ export const UserProfile = ({ userStats }) => {
         
         {[
           { label: 'Email', value: userProfile.email || currentUser?.email || 'N/A' },
-          { label: 'SĐT', value: userProfile.phone || 'Chưa thêm' },
+          { label: 'Xác minh Email', value: userProfile.emailVerified ? '✅ Đã xác minh' : '❌ Chưa xác minh' },
           { label: 'Loại tài khoản', value: userProfile.authProvider === 'google' ? '🔵 Google' : '📧 Email' },
           { label: 'Ngày tham gia', value: joinDate.toLocaleDateString('vi-VN') },
           { label: 'Số ngày tham gia', value: `${daysSinceJoin} ngày` },
